@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:avatar_glow/avatar_glow.dart';
 
 class MyHomePage extends StatefulWidget {
   static const routeName = '/home';
@@ -8,6 +10,48 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  stt.SpeechToText _speechToText = stt.SpeechToText();
+  bool _isListening = false;
+  String _command;
+  double _confidence = 1.0;
+
+  void listen() async{
+    if(!_isListening){
+      bool available = await _speechToText.initialize(
+        onStatus: (val){print('status $val');
+        if(val == 'notListening'){
+          setState(() {
+            _isListening = false;
+            _speechToText.stop();
+          });
+        }
+        },
+        onError:(val) {
+          setState(() {
+            _isListening = false;
+            _speechToText.stop();
+          });
+          print('error $val');
+        }
+      );
+      if(available){
+        setState(() {
+          _isListening = true;
+        });
+        _speechToText.listen(
+          listenFor: Duration(minutes: 20),
+          pauseFor: Duration(minutes: 2),
+          onResult: (val){
+            setState(() {
+              _command = val.recognizedWords;
+              print(_command);
+            });
+          }
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,23 +119,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       child: InkWell(
                         focusColor: Colors.white,
                         splashColor: Colors.deepPurpleAccent,
-                        child: Container(
-                          width: 300,
-                          height: 50,
-                          child: RaisedButton.icon(
-                              onPressed: () {},
-                              icon: Icon(
-                                FontAwesomeIcons.microphone,
-                                color: Colors.white,
-                              ),
-                              label: Text(
-                                'START',
-                                style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.deepPurpleAccent),
-                              )),
-                        ),
+                        child: Container(child: Text('Click mic for awesomeness!'),),
                       ),
                     )
                   ],
@@ -100,14 +128,20 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ],
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: Colors.deepPurpleAccent,
-          child: Icon(
-            FontAwesomeIcons.robot,
-            color: Colors.white,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        floatingActionButton:  AvatarGlow(
+          glowColor: Colors.redAccent,
+          duration: const Duration(milliseconds: 1000),
+          repeatPauseDuration: const Duration(milliseconds: 100),
+          repeat: true,
+          endRadius: 70.0,
+          animate: _isListening,
+          child: FloatingActionButton(
+            child: FaIcon(
+                FontAwesomeIcons.microphone
+            ),
+            onPressed: listen
           ),
-          onPressed: () {},
         ));
   }
 }
